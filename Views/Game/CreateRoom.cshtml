@@ -1,0 +1,32 @@
+@{
+    ViewData["Title"] = "創建房間";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>創建新房間</h4>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(ViewBag.Error))
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+                
+                <p>點擊下方按鈕創建一個新的遊戲房間。房間創建後會自動產生一個5位數的房間號碼。</p>
+                
+                <form method="post">
+                    <input type="hidden" name="dummy" value="create" />
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">創建房間</button>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">返回首頁</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

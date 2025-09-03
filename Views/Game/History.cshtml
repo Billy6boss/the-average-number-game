@@ -1,0 +1,62 @@
+@model List<BalanceGame.Models.GameHistory>
+@{
+    ViewData["Title"] = "遊戲記錄";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>我的遊戲記錄</h4>
+            </div>
+            <div class="card-body">
+                @if (Model.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>遊戲時間</th>
+                                    <th>房間號碼</th>
+                                    <th>我的數字</th>
+                                    <th>目標數字</th>
+                                    <th>結果</th>
+                                    <th>最終分數</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var history in Model)
+                                {
+                                    <tr class="@(history.IsWinner ? "table-success" : "")">
+                                        <td>@history.PlayedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                                        <td>@history.RoomCode</td>
+                                        <td>@history.PlayerNumber</td>
+                                        <td>@history.TargetNumber.ToString("F2")</td>
+                                        <td>
+                                            @if (history.IsWinner)
+                                            {
+                                                <span class="badge bg-success">勝利</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">失敗</span>
+                                            }
+                                        </td>
+                                        <td>@history.Score</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center">
+                        <p class="text-muted">還沒有遊戲記錄</p>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">開始遊戲</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

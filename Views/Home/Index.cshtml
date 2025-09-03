@@ -1,0 +1,57 @@
+@{
+    ViewData["Title"] = "首頁";
+}
+
+<div class="text-center">
+    <h1 class="display-4">歡迎來到天秤遊戲</h1>
+    <p class="lead">一個關於平均數和策略的多人遊戲</p>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">創建房間</h5>
+                <p class="card-text">創建一個新的遊戲房間，邀請朋友一起遊玩。</p>
+                <a asp-controller="Game" asp-action="CreateRoom" class="btn btn-primary">創建房間</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">加入房間</h5>
+                <p class="card-text">輸入房間號碼加入現有的遊戲。</p>
+                <a asp-controller="Game" asp-action="JoinRoom" class="btn btn-success">加入房間</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">遊戲規則</h5>
+                <div class="card-text">
+                    <h6>基本規則：</h6>
+                    <ul>
+                        <li>每位玩家在三分鐘之內從0到100選一個數字</li>
+                        <li>所有人選好後，將所有數字平均後乘以0.8</li>
+                        <li>最接近這個數字的人就是贏家</li>
+                        <li>除了贏家，其餘的人皆扣一點</li>
+                        <li>若有人扣分等於-10分則該玩家淘汰</li>
+                        <li>最後生存的人即為最後贏家</li>
+                    </ul>
+                    
+                    <h6>特殊規則（根據人數調整）：</h6>
+                    <ul>
+                        <li><strong>4人以下：</strong>如果有兩個人以上相同數字，該玩家的答案視為無效，直接扣一分</li>
+                        <li><strong>3人以下：</strong>若有人的數字與答案四捨五入後完全相同，則輸家扣2分</li>
+                        <li><strong>2人以下：</strong>若有人選擇100，則規則改為離平均數字較遠的人為贏家</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

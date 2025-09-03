@@ -1,0 +1,528 @@
+@model BalanceGame.Models.GameRoom
+@{
+    ViewData["Title"] = "遊戲房間 - " + Model.RoomCode;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左側 - 遊戲狀態和玩家列表 -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">房間: @Model.RoomCode</h5>
+                    <div>
+                        <span id="gameStatus" class="badge bg-secondary">等待中</span>
+                        <span id="timer" class="badge bg-info ms-2" style="display: none;"></span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="gameArea">
+                        <!-- 等待區域 -->
+                        <div id="waitingArea">
+                            <div class="text-center">
+                                <h6>等待所有玩家準備</h6>
+                                <button id="readyBtn" class="btn btn-success">準備</button>
+                                @if (Model.HostUsername == ViewBag.Username)
+                                {
+                                    <button id="startGameBtn" class="btn btn-primary ms-2" disabled>開始遊戲</button>
+                                    <button id="settingsBtn" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#settingsModal">房間設定</button>
+                                }
+                            </div>
+                        </div>
+                          <!-- 遊戲進行區域 -->
+                        <div id="gamePlayArea" style="display: none;">
+                            <div class="text-center">
+                                <h6>請選擇一個 0-100 的數字</h6>
+                                <div class="row justify-content-center">
+                                    <div class="col-md-10">
+                                        <!-- 選中的數字顯示 -->
+                                        <div class="mb-3">
+                                            <h4>已選擇: <span id="selectedNumber" class="text-primary">未選擇</span></h4>
+                                        </div>
+                                        
+                                        <!-- 數字按鈕網格 -->
+                                        <div class="mb-3">
+                                            <div class="number-grid-container">
+                                                <!-- 0~100 的按鈕將由 JavaScript 動態生成 -->
+                                                <div id="numberGrid" class="number-grid"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button id="submitBtn" class="btn btn-primary btn-lg" disabled>確認選擇</button>
+                                    </div>
+                                </div>
+                                <div id="submissionStatus" class="mt-3"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 結果顯示區域 -->
+                        <div id="resultsArea" style="display: none;">
+                            <div id="resultsContent"></div>
+                            <div class="text-center mt-3">
+                                <button id="nextRoundBtn" class="btn btn-success" style="display: none;">準備下一輪</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 遊戲結束區域 -->
+                        <div id="gameEndArea" style="display: none;">
+                            <div class="text-center">
+                                <h4 class="text-success">遊戲結束！</h4>
+                                <p id="winnerText"></p>
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-primary">回到首頁</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 玩家列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">玩家列表</h6>
+                </div>
+                <div class="card-body">
+                    <div id="playersList"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右側 - 聊天室 -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0">聊天室</h6>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div id="chatMessages" class="flex-grow-1 mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                    </div>
+                    <div id="chatInputArea">
+                        <div class="input-group">
+                            <input type="text" id="chatInput" class="form-control" placeholder="輸入訊息..." maxlength="200">
+                            <button id="sendChatBtn" class="btn btn-outline-secondary">發送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 房間設定 Modal -->
+@if (Model.HostUsername == ViewBag.Username)
+{
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">房間設定</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="roundTime" class="form-label">回合時間 (秒)</label>
+                        <input type="number" id="roundTime" class="form-control" value="@Model.RoundTimeSeconds" min="30" max="600">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="allowChat" @(Model.AllowChat ? "checked" : "")>
+                            <label class="form-check-label" for="allowChat">
+                                允許聊天
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveSettingsBtn">保存設定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script>
+        const username = '@ViewBag.Username';
+        const roomCode = '@ViewBag.RoomCode';
+        const isHost = '@Model.HostUsername' === username;
+        
+        // SignalR connection
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/gameHub")
+            .build();
+            
+        let gameState = 'waiting';
+        let isReady = false;
+        let hasSubmitted = false;
+        let countdownTimer = null;
+          // Start connection
+        connection.start().then(function () {
+            connection.invoke("JoinRoom", roomCode, username);
+        }).catch(function (err) {
+            console.error(err.toString());
+            alert('連接失敗: ' + err.toString());
+        });
+        
+        // Number selection variables
+        let selectedNumber = null;
+        
+        // Event handlers
+        document.getElementById('readyBtn').addEventListener('click', function() {
+            isReady = !isReady;
+            connection.invoke("SetReady", roomCode, username, isReady);
+        });
+        
+        if (isHost) {
+            document.getElementById('startGameBtn').addEventListener('click', function() {
+                connection.invoke("StartGame", roomCode, username);
+            });
+            
+            document.getElementById('saveSettingsBtn').addEventListener('click', function() {
+                const roundTime = parseInt(document.getElementById('roundTime').value);
+                const allowChat = document.getElementById('allowChat').checked;
+                
+                connection.invoke("UpdateRoomSettings", roomCode, username, roundTime, allowChat);
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
+                modal.hide();
+            });
+        }
+          document.getElementById('submitBtn').addEventListener('click', function() {
+            if (selectedNumber === null) {
+                alert('請先選擇一個數字');
+                return;
+            }
+            
+            connection.invoke("SubmitNumber", roomCode, username, selectedNumber);
+        });
+          // Number selection event handlers
+        // Number grid buttons (將在 initializeNumberGrid 中動態添加)
+          function initializeNumberGrid() {
+            const numberGrid = document.getElementById('numberGrid');
+            numberGrid.innerHTML = ''; // 清空現有內容
+            
+            // 生成 0~100 的按鈕
+            for (let i = 0; i <= 100; i++) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn number-btn';
+                button.dataset.number = i;
+                button.textContent = i;
+                
+                // 動態設定漸層背景色彩
+                const hue = 250 + (i * 1.1); // 從紫色到紅色
+                const saturation = 70 + (i * 0.3); // 飽和度逐漸增加
+                const lightness = 55 - (i * 0.1); // 亮度逐漸減少
+                
+                const gradient = `linear-gradient(135deg, 
+                    hsl(${hue}, ${saturation}%, ${lightness}%) 0%, 
+                    hsl(${hue + 20}, ${saturation + 10}%, ${lightness - 10}%) 100%)`;
+                
+                button.style.background = gradient;
+                
+                // 點擊事件
+                button.addEventListener('click', function() {
+                    const number = parseInt(this.dataset.number);
+                    selectNumber(number);
+                });
+                
+                numberGrid.appendChild(button);
+            }
+        }
+        
+        function selectNumber(number) {
+            selectedNumber = number;
+            
+            // Update display
+            document.getElementById('selectedNumber').textContent = number;
+            
+            // Update button states
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            document.querySelector(`[data-number="${number}"]`).classList.add('selected');
+            
+            // Enable submit button
+            document.getElementById('submitBtn').disabled = false;
+        }
+        
+        // Initialize number grid when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNumberGrid();
+        });
+        
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+        
+        document.getElementById('sendChatBtn').addEventListener('click', sendChatMessage);
+          document.getElementById('nextRoundBtn').addEventListener('click', function() {
+            isReady = true;
+            connection.invoke("SetReady", roomCode, username, true);
+        });
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (message) {
+                connection.invoke("SendChatMessage", roomCode, username, message);
+                input.value = '';
+            }
+        }
+        
+        // SignalR event handlers
+        connection.on("PlayersUpdated", function (players) {
+            updatePlayersList(players);
+            
+            if (isHost) {
+                const allReady = players.filter(p => !p.isEliminated).length > 1 && 
+                                players.filter(p => !p.isEliminated).every(p => p.isReady);
+                document.getElementById('startGameBtn').disabled = !allReady || gameState !== 'waiting';
+            }
+        });
+        
+        connection.on("RoomUpdated", function (room) {
+            updateGameStatus(room.state);
+            gameState = room.state.toLowerCase();
+            
+            // Update settings if they changed
+            if (room.roundTimeSeconds) {
+                document.getElementById('roundTime').value = room.roundTimeSeconds;
+            }
+            if (room.allowChat !== undefined) {
+                document.getElementById('allowChat').checked = room.allowChat;
+                document.getElementById('chatInputArea').style.display = room.allowChat ? '' : 'none';
+            }
+        });
+        
+        connection.on("GameStarted", function (room) {
+            gameState = 'playing';
+            hasSubmitted = false;
+            showGamePlayArea();
+            updateGameStatus('playing');
+            
+            // Start countdown
+            startCountdown(room.roundTimeSeconds);
+        });        connection.on("NumberSubmitted", function (number) {
+            hasSubmitted = true;
+            
+            // Disable all number selection
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+            document.getElementById('submitBtn').disabled = true;
+            
+            document.getElementById('submissionStatus').innerHTML = 
+                '<div class="alert alert-success">已提交數字: ' + number + '</div>';
+        });
+        
+        connection.on("RoundResults", function (result) {
+            showResults(result);
+            clearCountdown();
+        });
+        
+        connection.on("GameFinished", function (winnerUsername) {
+            showGameEnd(winnerUsername);
+        });
+        
+        connection.on("ChatMessage", function (sender, message) {
+            addChatMessage(sender, message);
+        });
+        
+        connection.on("Error", function (message) {
+            alert('錯誤: ' + message);
+        });
+        
+        connection.on("JoinedRoom", function (code) {
+            console.log('成功加入房間: ' + code);
+        });
+        
+        // Helper functions
+        function updatePlayersList(players) {
+            const list = document.getElementById('playersList');
+            list.innerHTML = '';
+            
+            players.forEach(player => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'row mb-2 p-2 border rounded';
+                
+                let badges = '';
+                if (player.isHost) badges += '<span class="badge bg-warning ms-1">房主</span>';
+                if (player.isReady) badges += '<span class="badge bg-success ms-1">準備</span>';
+                if (player.isEliminated) badges += '<span class="badge bg-danger ms-1">淘汰</span>';
+                if (player.hasSubmitted && gameState === 'playing') badges += '<span class="badge bg-info ms-1">已提交</span>';
+                
+                playerElement.innerHTML = `
+                    <div class="col">
+                        <strong>${player.username}</strong>
+                        ${badges}
+                    </div>
+                    <div class="col-auto">
+                        <span class="badge bg-secondary">分數: ${player.score}</span>
+                    </div>
+                `;
+                
+                if (player.isEliminated) {
+                    playerElement.style.opacity = '0.5';
+                }
+                
+                list.appendChild(playerElement);
+            });
+        }
+        
+        function updateGameStatus(state) {
+            const statusElement = document.getElementById('gameStatus');
+            const statusMap = {
+                'waiting': { text: '等待中', class: 'bg-secondary' },
+                'playing': { text: '遊戲進行中', class: 'bg-primary' },
+                'showingresults': { text: '顯示結果', class: 'bg-info' },
+                'finished': { text: '遊戲結束', class: 'bg-success' }
+            };
+            
+            const status = statusMap[state.toLowerCase()] || statusMap['waiting'];
+            statusElement.textContent = status.text;
+            statusElement.className = 'badge ' + status.class;
+        }        function showGamePlayArea() {
+            document.getElementById('waitingArea').style.display = 'none';
+            document.getElementById('gamePlayArea').style.display = 'block';
+            document.getElementById('resultsArea').style.display = 'none';
+            document.getElementById('gameEndArea').style.display = 'none';
+            
+            // Reset form
+            selectedNumber = null;
+            document.getElementById('selectedNumber').textContent = '未選擇';
+            
+            // Reset button states
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.disabled = false;
+            });
+            
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submissionStatus').innerHTML = '';
+        }
+        
+        function showResults(result) {
+            document.getElementById('waitingArea').style.display = 'none';
+            document.getElementById('gamePlayArea').style.display = 'none';
+            document.getElementById('resultsArea').style.display = 'block';
+            document.getElementById('gameEndArea').style.display = 'none';
+            
+            let html = `
+                <div class="text-center mb-3">
+                    <h5>回合結果</h5>
+                    <p>平均數: <strong>${result.averageNumber.toFixed(2)}</strong></p>
+                    <p>目標數字: <strong>${result.targetNumber.toFixed(2)}</strong></p>
+                    <p>勝利者: <strong class="text-success">${result.winnerUsername}</strong></p>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>玩家</th>
+                                <th>數字</th>
+                                <th>差距</th>
+                                <th>分數變化</th>
+                                <th>總分</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            result.results.forEach(r => {
+                const rowClass = r.isWinner ? 'table-success' : (r.isEliminated ? 'table-danger' : '');
+                html += `
+                    <tr class="${rowClass}">
+                        <td>${r.username}</td>
+                        <td>${r.number}</td>
+                        <td>${r.distance.toFixed(2)}</td>
+                        <td>${r.scoreChange}</td>
+                        <td>${r.totalScore}</td>
+                        <td>
+                            ${r.isWinner ? '<span class="badge bg-success">勝利</span>' : ''}
+                            ${r.isEliminated ? '<span class="badge bg-danger">淘汰</span>' : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('resultsContent').innerHTML = html;
+            document.getElementById('nextRoundBtn').style.display = 'inline-block';
+        }
+        
+        function showGameEnd(winnerUsername) {
+            document.getElementById('waitingArea').style.display = 'none';
+            document.getElementById('gamePlayArea').style.display = 'none';
+            document.getElementById('resultsArea').style.display = 'none';
+            document.getElementById('gameEndArea').style.display = 'block';
+            
+            document.getElementById('winnerText').textContent = '恭喜 ' + winnerUsername + ' 獲得最終勝利！';
+        }
+        
+        function addChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'mb-2';
+            
+            const time = new Date().toLocaleTimeString();
+            const senderClass = sender === '系統' ? 'text-info' : (sender === username ? 'text-primary' : 'text-dark');
+            
+            messageElement.innerHTML = `
+                <small class="text-muted">[${time}]</small>
+                <strong class="${senderClass}">${sender}:</strong>
+                <span>${escapeHtml(message)}</span>
+            `;
+            
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function startCountdown(seconds) {
+            const timerElement = document.getElementById('timer');
+            timerElement.style.display = 'inline-block';
+            
+            let remaining = seconds;
+            countdownTimer = setInterval(() => {
+                const minutes = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                timerElement.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+                
+                if (remaining <= 0) {
+                    clearCountdown();
+                }
+                remaining--;
+            }, 1000);
+        }
+        
+        function clearCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+            document.getElementById('timer').style.display = 'none';
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            connection.invoke("LeaveRoom", roomCode, username);
+        });
+    </script>
+}

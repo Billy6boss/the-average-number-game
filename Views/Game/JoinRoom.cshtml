@@ -1,0 +1,56 @@
+@{
+    ViewData["Title"] = "加入房間";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>加入房間</h4>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(ViewBag.Error))
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+                
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="roomCode" class="form-label">房間號碼</label>
+                        <input type="text" class="form-control" id="roomCode" name="roomCode" 
+                               required maxlength="5" minlength="5" 
+                               placeholder="請輸入5位數房間號碼" 
+                               style="text-align: center; font-size: 1.2em; letter-spacing: 0.2em;">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg">加入房間</button>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">返回首頁</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roomCodeInput = document.getElementById('roomCode');
+    
+    roomCodeInput.addEventListener('input', function(e) {
+        // Only allow numbers
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        
+        // Convert to uppercase (in case letters are somehow entered)
+        e.target.value = e.target.value.toUpperCase();
+    });
+    
+    roomCodeInput.addEventListener('paste', function(e) {
+        setTimeout(() => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+        }, 0);
+    });
+});
+</script>
